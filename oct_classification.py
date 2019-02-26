@@ -16,8 +16,9 @@ import h5py
 # is_load_weight = False
 
 def extract_feature(train_path, test_path, file_name, image_size=(299, 299)):
-
     img_gen = ImageDataGenerator(rescale=1./255)
+    
+    # Genererer traening/testset, som er omskaleret og med labels
     train_generator = img_gen.flow_from_directory(
             train_path,
             target_size=image_size,
@@ -31,12 +32,14 @@ def extract_feature(train_path, test_path, file_name, image_size=(299, 299)):
             classes=['AMD','DME','NOR'],
             shuffle=False)
 
+    # Loader InceptionV3 modellen og extraherer lag "mixed8", som er et af mellemlagene
     base_model = InceptionV3(weights='imagenet', include_top=False)
     model = Model(inputs=base_model.input, outputs=base_model.get_layer('mixed8').output)
 
     train = model.predict_generator(train_generator)
     test = model.predict_generator(test_generator)
 
+    # Opretter ny fil, f og opretter dataset i denne, med navne og data
     f = h5py.File(file_name, 'w')
     f.create_dataset("train", data=train)
     f.create_dataset("test", data=test)
@@ -45,14 +48,16 @@ def extract_feature(train_path, test_path, file_name, image_size=(299, 299)):
     f.close()
 
 def build_model(file_name, model_file, kernel_num = 128):
-
+    
+    # loader data
     f = h5py.File(file_name, 'r')
     X_train = np.array(f['train'])
     Y_train = np.array(f['train_label'])
     f.close()
 
     Y_train = np_utils.to_categorical(Y_train)
-
+    
+    # Bygger deres eget netværk
     input_tensor = Input(X_train.shape[1:])
     x = input_tensor
     x = Conv2D(kernel_num, 3, padding='same')(x)
@@ -70,8 +75,11 @@ def build_model(file_name, model_file, kernel_num = 128):
     predictions = Dense(3, activation='softmax')(x)
 
     model = Model(inputs=input_tensor, outputs=predictions)
+    
+    # Overvej Adam fremfor Adadelta, da ADAM har performet bedre visse steder
     model.compile(optimizer='Adadelta', loss='categorical_crossentropy',metrics=['categorical_accuracy'])
     
+    #traener
     for i in range(50):
         print ("round: " + str(i + 1))
         model.fit(X_train, Y_train)
@@ -81,12 +89,14 @@ def build_model(file_name, model_file, kernel_num = 128):
     model.save(model_file)
 
 def model_predict(file_name, model_file, result_path):
+    # Loader
     f = h5py.File(file_name, 'r')
     X_test = np.array(f['test'])
     Y_test = np.array(f['test_label'])
     f.close()
 
     Y_test = np_utils.to_categorical(Y_test)
+    
     model = load_model(model_file)
 
     test_acc = model.evaluate(X_test, Y_test)

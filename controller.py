@@ -1,17 +1,25 @@
 import oct_classification
 import divide_dataset
 
+
 img_path = 'HOSPITAL_2_560'
 train_path = 'HOSPITAL_2_560/test'
 test_path = 'HOSPITAL_2_560/train'
 train_num = 280
 
+'''
+Det er blot navne til generering af faktiske filer, modeller og resultater, 
+saa naar de ikke eksisterer laves der nogle nye og findes de, saa slettes de gamle
+Med forbehold for at jeg ikke har fanget det helt 100%
+'''
 file_name = 'middle_feature.h5'
 model_file = 'model.h5'
 result_path = 'result.csv'
 
 layer_num = 150
 
+
+# Hvorfor 10 gange iteration?
 iteration_times = 10
 
 # proposed method
