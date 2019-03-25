@@ -2,9 +2,9 @@ import oct_classification
 import divide_dataset
 
 
-img_path = 'HOSPITAL_2_560'
-train_path = 'HOSPITAL_2_560/test'
-test_path = 'HOSPITAL_2_560/train'
+img_path = 'Data/OCT2019'
+test_path = img_path + '/test'
+train_path = img_path + '/train'
 train_num = 280
 
 '''
