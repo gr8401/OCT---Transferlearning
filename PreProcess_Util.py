@@ -17,7 +17,7 @@ def feature(x, order=2):
     return np.power(x, np.arange(order+1).reshape(1, -1)) 
 
 
-def ransac_polyfit(x, y, order=2, n=50, k=8, t=8, d=100, f=0.8):
+def ransac_polyfit(x, y, order=2, n=50, k=100, t=8, d=100, f=0.8):
   # Thanks https://en.wikipedia.org/wiki/Random_sample_consensus
   
   # n – minimum number of data points required to fit the model

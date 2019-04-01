@@ -27,9 +27,11 @@ def feature(x, order=2):
     return np.power(x, np.arange(order+1).reshape(1, -1)) 
 
 # NORMAL, DRUSEN, DME eller CNV NORMAL-1001666-1 #NORMAL-1001772-1 #DME-1805818-2
+# DRUSEN-1047803-4
+# DME-306172-20
 
 path = 'C:\\Users\\danie\\Desktop\\Misc\\ST7\\OCT---Transferlearning\\'
-filename = os.path.join(path, 'NORMAL-1001666-1.JPEG')
+filename = os.path.join(path, 'DRUSEN.JPG')
 #filename = 'C:\\Users\\danie\\Desktop\\ST8\\Projekt\\Data\\NORMAL-1001666-1.jpg'
 test_im = io.imread(filename)
 test_im = test_im/(2**(8)-1) # normaliserer
@@ -51,7 +53,7 @@ dog = gaus2-gaus1
 
 
 
-dog = dog < -0.00025; #io.imshow(dog)
+dog = dog < -0.00018; #io.imshow(dog)
 '''
 plt.figure(0)
 plt.imshow(dog, 'gray', interpolation = 'none')
@@ -64,28 +66,86 @@ weights = test_im[dog] / float(test_im.max())
 # Recasts DoG to int
 dog = dog*1
 
+dog[:,0:5] = 0
+dog[:,dog.shape[1]-5:dog.shape[1]] = 0
+
+# Strukturelt element i diskfrom med stoerrelse 3
+selem = mp.disk(3)
+
+# Dilation operation
+dog_dilate = mp.dilation(dog, selem);
+
 # Label regioner
-dog_label = ms.label(dog)
+dog_label = ms.label(dog_dilate)
+
 '''
 For hver region, find start raekke og soejle og vurdér om regionen er (1) er stoerre
 end 2000 pixels, (2) om den har pixel vaerdier indenfor de foerste 100 raekker
 og (3) om der er pixel vaerdier indenfor de sidste 100 raekker. 
 Er et af disse opfyldt, så slet regionen i det filtrerede billede
+!!! NYT !!! Nu slettes der også i regions billedet med henblik på en sekundær fjerning af billeder senere
 '''
+# Note! Kan effektiviseres
 plt.figure(1);plt.subplot(1,2,1);plt.imshow(dog)
 for pred_region in ms.regionprops(dog_label):
+    # Finder koordinater for regionen
+    Coord = pred_region.coords
+    Coord1 = Coord[:, 0]
+    Coord2 = Coord[:, 1]
     minr, minc, maxr, maxc = pred_region.bbox
-    if pred_region.area < 2000 or minr < 100 or maxr > len(dog_label)-1:
-        for i in range(minr, maxr):
-            for j in range(minc, maxc):
-                dog[i][j] = 0
+    if pred_region.area < 2000 or minr < 100 or maxr >len(dog_label)-100:
+        for i in range(len(Coord1)):
+            # Fjerner nu både regionerne i thresholded billede OG regionsbilleder
+            dog[Coord1[i]][Coord2[i]] = 0
+            dog_label[Coord1[i]][Coord2[i]] = 0
+
+# Laver en regions variabel NOTE! Kan ogsaa bruges til at gøre ovenstaende 
+# for loop mere forstaelig
+pred_region = ms.regionprops(dog_label)
+
+
+'''
+Lav liste med alle centroider find max af liste samt index og brug det index til at 
+slette alle andre regioner undtagen dem som er indenfor 50 pixels vertikalt
+'''
+# Centroide array, samt max og Index
+cent_array = []
+for i in range(len(pred_region)):
+    cent_array.append(pred_region[i].centroid[0])
+Max = np.max(cent_array)    
+idx = np.argmax(cent_array)
+
+'''
+Hvis Max-index er = iterations variable og laengde af centroide arrayet har samme laengde
+Saa slut for loop
+Hvis iterations variabel er stoerre eller lig med index og laengden af centroid variablen er 
+laengere end iterationsvariablen, da laeg en til iterationsvariablen, saaledes vi
+fortsaetter loopet indtil enden af centroide arrayet MEN IKKE SLETTER regionen ved max index
+Slutteligt slettes regioner hvis de vertikalt afviger mere end 50 pixels (kan aendres)
+
+'''
+for i in range(len(cent_array)-1):
+    if i == idx and len(cent_array-1) == idx:
+        break
+    if i >= idx and len(cent_array-1) > i:
+        i = i + 1
+    if np.abs(pred_region[i].centroid[0]-Max) >50:
+        Coord = pred_region[i].coords
+        Coord1 = Coord[:, 0]
+        Coord2 = Coord[:, 1] 
+        for j in range(len(Coord1)):
+             dog[Coord1[j]][Coord2[j]] = 0 
 
 plt.subplot(1,2,2);plt.imshow(dog);
+
 
 # Get coordinates of pixels corresponding to marked region
 X = np.argwhere(dog)
 
-# Column indices
+''' Column indices     !!!! NOTE  Denne laver stadig en x-vektor, som ikke er integers!!!!
+Dette mener jeg blev fikset i jeres version, men det volder ikke problemer pt. ellers tjek
+Preprocess_Centroid
+'''
 x = X[:, 1].reshape(-1, 1)
 # Row indices to predict. Note origin is at top left corner
 y = X[:, 0]
@@ -129,12 +189,14 @@ ax.imshow(test_im)
 ax.plot(x_test, y_test_unweighted, color="green", marker='o', label="Unweighted")
 ax.plot(x, y, color="blue", marker='o', label="RANSAC")
 fig.legend()'''
-plt.figure(2);
+# Specificerer stoerrelse til print, kan undvaeres
+fig1 = plt.figure(2, figsize = (496*1.3/139, 512*1.3/139), dpi = 139);
+plt.axis('off');
 plt.imshow(test_im);
-plt.plot(x_test, y_test_unweighted, color="green", marker='o', label="Unweighted");
-plt.plot(x, y, color="blue", marker='o', label="RANSAC")
+plt.plot(x_test, y_test_unweighted, color="green", marker='o', markersize =2, label="Unweighted");
+plt.plot(x, y, color="blue", marker='o', markersize =2, label="RANSAC")
 
-#fig.savefig("curve.png")
+fig1.savefig("RANSAC2.png")
 
 #plt.close()
 y_diff = np.diff(np.round(y))
@@ -144,6 +206,17 @@ y_diff = np.diff(np.round(y))
 
 test_new = np.copy(test_im)
 n_roll = []
+Y_test = np.copy(y)
+'''
+Det kan også optimeres ved at tage forskellen på første reference pixel og de resterende pixels
+Herefter kan man give roll en tuple istedet for en for løkke, måske
+testtest = np.copy(test_im)
+n_roll_test = np.round(Y_test[0]) - np.round(Y_test[1:len(y)])
+n_roll_test = n_roll_test.astype(int)
+testtest = np.roll(testtest[:,1:len(testtest)], n_roll_test, axis = 1)
+
+# Der er stadig et problem med at kun halvdelen af billedet flyttes.
+'''
 for i in range(test_im.shape[1]-1):
     temp = int(np.round(y[i])-np.round(y[i+1]))
     n_roll.append(temp)
