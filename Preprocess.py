@@ -29,9 +29,10 @@ def feature(x, order=2):
 # NORMAL, DRUSEN, DME eller CNV NORMAL-1001666-1 #NORMAL-1001772-1 #DME-1805818-2
 # DRUSEN-1047803-4
 # DME-306172-20
+# DRUSEN.JPG
 
 path = 'C:\\Users\\danie\\Desktop\\Misc\\ST7\\OCT---Transferlearning\\'
-filename = os.path.join(path, 'DRUSEN.JPG')
+filename = os.path.join(path, 'DME-306172-20.JPEG')
 #filename = 'C:\\Users\\danie\\Desktop\\ST8\\Projekt\\Data\\NORMAL-1001666-1.jpg'
 test_im = io.imread(filename)
 test_im = test_im/(2**(8)-1) # normaliserer
@@ -39,6 +40,37 @@ test_im = test_im/(2**(8)-1) # normaliserer
 test_med = sc.medfilt(test_im, 9)
 
 plt.figure;plt.subplot(1,2,1);plt.imshow(test_im);plt.subplot(1,2,2);plt.imshow(test_med)
+'''
+'''
+# TEST om at rulle billedet inden vi starter for at kunne have et smart bund og top threshold
+# Det virker ikke lige nu, da der ikke virker til at være system i om det hvide
+# er i bunden og at billedet så skal rykkes ned eller lignende...
+# Hvis dette virker, så husk at ændre threshold for laveste till len -100 igen
+Roll_up = False
+if test_im[0][int(np.round(test_im.shape[1]/2))] == 1:# or test_im[0][test_im.shape[1]-1] == 1:
+    Roll_up = True
+    for i in range(test_im.shape[1]-1):
+        test_im[:,i+1] = np.roll(test_im[:,i+1], 100)
+if Roll_up == False:
+    if test_im[test_im.shape[0]-1][int(np.round(test_im.shape[1]/2))] == 1: #or test_im[test_im.shape[0]-1][test_im.shape[1]-1]:
+        for i in range(test_im.shape[1]-1):
+            test_im[:,i+1] = np.roll(test_im[:,i+1], -100)
+'''
+'''
+Heller ikke helt robust
+# Fjerner større nederste regioner, hvis der er nogle
+# Ikke alle regioner fjernest således de kan sorteres fra baseret på areal
+# Måske med et lavere threshhold (Lige nu kører vi rent 1)
+for pred_region in ms.regionprops(ms.label(test_im)):
+    minr, minc, maxr, maxc = pred_region.bbox
+    if maxr >len(test_im)-1:
+        # Finder koordinater for regionen
+        Coord = pred_region.coords
+        Coord1 = Coord[:, 0]
+        Coord2 = Coord[:, 1]
+        for i in range(len(Coord1)):
+            # Fjerner nu både regionerne i thresholded billede OG regionsbilleder
+            test_im[Coord1[i]][Coord2[i]] = 0
 '''
 
 # Anisotropic diffusions filtrering, kappa = 50, iteration n = 200
@@ -66,6 +98,7 @@ weights = test_im[dog] / float(test_im.max())
 # Recasts DoG to int
 dog = dog*1
 
+# Fjerner de yderste 5 søjler af pixels 
 dog[:,0:5] = 0
 dog[:,dog.shape[1]-5:dog.shape[1]] = 0
 
@@ -93,7 +126,7 @@ for pred_region in ms.regionprops(dog_label):
     Coord1 = Coord[:, 0]
     Coord2 = Coord[:, 1]
     minr, minc, maxr, maxc = pred_region.bbox
-    if pred_region.area < 2000 or minr < 100 or maxr >len(dog_label)-100:
+    if pred_region.area < 2000 or minr < 100 or maxr >len(dog_label)-20:
         for i in range(len(Coord1)):
             # Fjerner nu både regionerne i thresholded billede OG regionsbilleder
             dog[Coord1[i]][Coord2[i]] = 0
@@ -174,10 +207,19 @@ y_test_unweighted = X_test.dot(w_unweighted)
 
 
 ##!!!!!!!!! ALTERNATIV Metode - RANSAC !!!!!!!!!!!!!!##
+
 dog_zeros = np.nonzero(dog)
 
+'''
+Sænker iterativt nødvendige punkter i parabelfittet indtil vi har et bestfit
+'''
+for i in reversed(range(50)):
+    bestfit = ppu.ransac_polyfit(dog_zeros[1], dog_zeros[0], n = i)
+    if bestfit is not None:
+        check = i
+        break
+        
 
-bestfit = ppu.ransac_polyfit(dog_zeros[1], dog_zeros[0])
 poly = np.poly1d(bestfit)
 
 x = np.linspace(0, test_im.shape[1], n_samples)
@@ -196,7 +238,7 @@ plt.imshow(test_im);
 plt.plot(x_test, y_test_unweighted, color="green", marker='o', markersize =2, label="Unweighted");
 plt.plot(x, y, color="blue", marker='o', markersize =2, label="RANSAC")
 
-fig1.savefig("RANSAC2.png")
+#fig1.savefig("RANSAC2.png")
 
 #plt.close()
 y_diff = np.diff(np.round(y))
