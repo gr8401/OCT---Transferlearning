@@ -32,7 +32,7 @@ def feature(x, order=2):
 # DRUSEN.JPG
 
 path = 'C:\\Users\\danie\\Desktop\\Misc\\ST7\\OCT---Transferlearning\\'
-filename = os.path.join(path, 'DME-306172-20.JPEG')
+filename = os.path.join(path, 'DRUSEN-1047803-4.JPEG')
 #filename = 'C:\\Users\\danie\\Desktop\\ST8\\Projekt\\Data\\NORMAL-1001666-1.jpg'
 test_im = io.imread(filename)
 test_im = test_im/(2**(8)-1) # normaliserer
@@ -43,9 +43,9 @@ plt.figure;plt.subplot(1,2,1);plt.imshow(test_im);plt.subplot(1,2,2);plt.imshow(
 '''
 '''
 # TEST om at rulle billedet inden vi starter for at kunne have et smart bund og top threshold
-# Det virker ikke lige nu, da der ikke virker til at være system i om det hvide
-# er i bunden og at billedet så skal rykkes ned eller lignende...
-# Hvis dette virker, så husk at ændre threshold for laveste till len -100 igen
+# Det virker ikke lige nu, da der ikke virker til at vaere system i om det hvide
+# er i bunden og at billedet saa skal rykkes ned eller lignende...
+# Hvis dette virker, saa husk at aendre threshold for laveste till len -100 igen
 Roll_up = False
 if test_im[0][int(np.round(test_im.shape[1]/2))] == 1:# or test_im[0][test_im.shape[1]-1] == 1:
     Roll_up = True
@@ -58,9 +58,9 @@ if Roll_up == False:
 '''
 '''
 Heller ikke helt robust
-# Fjerner større nederste regioner, hvis der er nogle
-# Ikke alle regioner fjernest således de kan sorteres fra baseret på areal
-# Måske med et lavere threshhold (Lige nu kører vi rent 1)
+# Fjerner stoerre nederste regioner, hvis der er nogle
+# Ikke alle regioner fjernest saaledes de kan sorteres fra baseret paa areal
+# Maaske med et lavere threshhold (Lige nu koerer vi rent 1)
 for pred_region in ms.regionprops(ms.label(test_im)):
     minr, minc, maxr, maxc = pred_region.bbox
     if maxr >len(test_im)-1:
@@ -69,7 +69,7 @@ for pred_region in ms.regionprops(ms.label(test_im)):
         Coord1 = Coord[:, 0]
         Coord2 = Coord[:, 1]
         for i in range(len(Coord1)):
-            # Fjerner nu både regionerne i thresholded billede OG regionsbilleder
+            # Fjerner nu baade regionerne i thresholded billede OG regionsbilleder
             test_im[Coord1[i]][Coord2[i]] = 0
 '''
 
@@ -98,7 +98,7 @@ weights = test_im[dog] / float(test_im.max())
 # Recasts DoG to int
 dog = dog*1
 
-# Fjerner de yderste 5 søjler af pixels 
+# Fjerner de yderste 5 soejler af pixels 
 dog[:,0:5] = 0
 dog[:,dog.shape[1]-5:dog.shape[1]] = 0
 
@@ -115,8 +115,8 @@ dog_label = ms.label(dog_dilate)
 For hver region, find start raekke og soejle og vurdér om regionen er (1) er stoerre
 end 2000 pixels, (2) om den har pixel vaerdier indenfor de foerste 100 raekker
 og (3) om der er pixel vaerdier indenfor de sidste 100 raekker. 
-Er et af disse opfyldt, så slet regionen i det filtrerede billede
-!!! NYT !!! Nu slettes der også i regions billedet med henblik på en sekundær fjerning af billeder senere
+Er et af disse opfyldt, sae slet regionen i det filtrerede billede
+!!! NYT !!! Nu slettes der ogsae i regions billedet med henblik paa en sekundaer fjerning af billeder senere
 '''
 # Note! Kan effektiviseres
 plt.figure(1);plt.subplot(1,2,1);plt.imshow(dog)
@@ -127,12 +127,12 @@ for pred_region in ms.regionprops(dog_label):
     Coord2 = Coord[:, 1]
     minr, minc, maxr, maxc = pred_region.bbox
     if pred_region.area < 2000 or minr < 100 or maxr >len(dog_label)-20:
-        for i in range(len(Coord1)):
-            # Fjerner nu både regionerne i thresholded billede OG regionsbilleder
-            dog[Coord1[i]][Coord2[i]] = 0
-            dog_label[Coord1[i]][Coord2[i]] = 0
+         # Fjerner nu baede regionerne i thresholded billede OG regionsbilleder
+         # Nu uden forloekke
+         dog[Coord1, Coord2] = 0
+         dog_label[Coord1, Coord2] = 0
 
-# Laver en regions variabel NOTE! Kan ogsaa bruges til at gøre ovenstaende 
+# Laver en regions variabel NOTE! Kan ogsaa bruges til at goere ovenstaende 
 # for loop mere forstaelig
 pred_region = ms.regionprops(dog_label)
 
@@ -166,8 +166,8 @@ for i in range(len(cent_array)-1):
         Coord = pred_region[i].coords
         Coord1 = Coord[:, 0]
         Coord2 = Coord[:, 1] 
-        for j in range(len(Coord1)):
-             dog[Coord1[j]][Coord2[j]] = 0 
+        # Nu uden forloekke fjerner vi regionerne i oprindelige billede
+        dog[Coord1, Coord2] = 0 
 
 plt.subplot(1,2,2);plt.imshow(dog);
 
@@ -211,7 +211,7 @@ y_test_unweighted = X_test.dot(w_unweighted)
 dog_zeros = np.nonzero(dog)
 
 '''
-Sænker iterativt nødvendige punkter i parabelfittet indtil vi har et bestfit
+Saenker iterativt noedvendige antal punkter i parabelfittet indtil vi har et bestfit
 '''
 for i in reversed(range(50)):
     bestfit = ppu.ransac_polyfit(dog_zeros[1], dog_zeros[0], n = i)
@@ -244,14 +244,9 @@ plt.plot(x, y, color="blue", marker='o', markersize =2, label="RANSAC")
 y_diff = np.diff(np.round(y))
 #y_diffR = np.round(y_diff)
 
-
-
-test_new = np.copy(test_im)
-n_roll = []
-Y_test = np.copy(y)
 '''
-Det kan også optimeres ved at tage forskellen på første reference pixel og de resterende pixels
-Herefter kan man give roll en tuple istedet for en for løkke, måske
+Det kan ogsaa optimeres ved at tage forskellen paa foerste reference pixel og de resterende pixels
+Herefter kan man give roll en tuple istedet for en for loekke, maaske
 testtest = np.copy(test_im)
 n_roll_test = np.round(Y_test[0]) - np.round(Y_test[1:len(y)])
 n_roll_test = n_roll_test.astype(int)
@@ -259,15 +254,33 @@ testtest = np.roll(testtest[:,1:len(testtest)], n_roll_test, axis = 1)
 
 # Der er stadig et problem med at kun halvdelen af billedet flyttes.
 '''
+test_new = np.copy(test_im)
+n_roll = []
+Y_test = np.copy(y)
+
+'''
+Ny forbedret rulle metode, resultat er det samme
+sammenlign test_new med testtest, hvis i vil vaere sikre
+'''
+testtest = np.copy(test_im)
+n_roll_test = np.round(Y_test[0]) - np.round(Y_test[1:len(y)])
+n_roll_test = n_roll_test.astype(int)
+x_col = np.linspace(0, test_im.shape[1]-1, n_samples); x_col = x_col.astype(int)
+cols = x_col[1:len(x_col)]  # Columns to be rolled
+dirn = -n_roll_test # Offset with direction as sign
+n = testtest.shape[0]
+testtest[:,cols] = testtest[np.mod(np.arange(n)[:,None] + dirn,n),cols]
+
+'''
 for i in range(test_im.shape[1]-1):
     temp = int(np.round(y[i])-np.round(y[i+1]))
     n_roll.append(temp)
     #Roll statement
     test_new[:,i+1] = np.roll(test_new[:,i+1], temp)
     y[i+1] = y[i+1] + temp
-
+'''
 plt.figure(3);plt.subplot(1,2,1);plt.imshow(test_im);
-plt.subplot(1,2,2);plt.imshow(test_new)
+plt.subplot(1,2,2);plt.imshow(testtest)
 #plt.figure;plt.imshow(test_new)
 
 #'''
