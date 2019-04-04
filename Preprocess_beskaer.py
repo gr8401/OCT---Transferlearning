@@ -256,4 +256,16 @@ start_width = (int)(diff_width/2)
 ''' Beskær billedet ud fra placeringen på bruchs membran, her specificerer vi til 300x496'''
 crop_img = testtest[(int)(y_akse_70 - 250):(int)(y_akse_70 + 50),start_width:(start_width + 496)] 
 
-plt.figure(4);plt.imshow(crop_img);
+plt.figure(4);plt.subplot(1,2,1);plt.imshow(crop_img);
+
+nowhite_img = crop_img > 0.9
+for pred_region in ms.regionprops(ms.label(nowhite_img)):
+    minr, minc, maxr, maxc = pred_region.bbox
+    if minr == 0 or maxr == len((nowhite_img)-1):
+        Coord = pred_region.coords
+        Coord1 = Coord[:, 0]
+        Coord2 = Coord[:, 1]
+        for i in range(len(Coord1)):
+            crop_img[Coord1[i]][Coord2[i]] = np.nan
+            
+plt.subplot(1,2,2);plt.imshow(crop_img);
