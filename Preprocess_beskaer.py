@@ -1,11 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Mar 15 12:55:04 2019
-
-@author: danie
-"""
-
-
 import os
 import PreProcess_Util as ppu
 from skimage import io
@@ -13,9 +5,6 @@ from skimage.filters import gaussian
 import skimage.morphology as mp
 import skimage.measure as ms
 import numpy as np
-#from sklearn.metrics import confusion_matrix
-#import scipy.signal as sc
-
 import matplotlib.pyplot as plt
 
 def feature(x, order=2):
@@ -34,23 +23,29 @@ Virker IKKE:
     DME-1966898-8.JPEG - finder poly det forkerte sted
     DME-1966898-10.JPEG - mangler meget kant, men den kan køre det, resultatet er bahh
     CNV-6666538-176.JPEG - finder ikke rigtig poly + meget bredt billede, så meget skæres væk
+    DME-6704343-18.JPEG -  finder forkert parabel og da billedet er 1536 i bredden, beskæres meget at sygdomstegnene væk
+    DME-9749066-2.JPEG - finder forkert parabel og beskærer lidt sygdom væk (dimension 768x496)
 
 Virker:
     DME-3064922-163.JPEG
     DME-3358004-28.JPEG
     DME-3447259-9.JPEG
     DME-3608465-33.JPEG
+    DME-8869683-58.JPEG (dimension 768x496)
+    DME-1875232-2.JPEG (dimension 1024x496)
+    DME-9752837-2.JPEG (dimension 1536x496)
+    DME-9720453-6.JPEG (dimension 1536x496) PROBLEM: beskærer sygdomstegn væk grundet bredden
 '''
 
 path = 'C:\\Users\\MetteToettrupGade\\Desktop\\CellData\\OCT\\train\\DME\\'
-filename = os.path.join(path, 'DME-3608465-33.JPEG')
+filename = os.path.join(path, 'DME-3447259-9.JPEG')
 test_im = io.imread(filename)
 test_im = test_im/(2**(8)-1) # normaliserer
 
 # Anisotropic diffusions filtrering, kappa = 50, iteration n = 200
 filtered_im = ppu.anisodiff(test_im, niter=200)
 plt.figure;plt.imshow(filtered_im)
-#'''
+
 # DoG 
 gaus1 = gaussian(filtered_im, sigma = 0.4)
 gaus2 = gaussian(filtered_im, sigma = 0.6)
@@ -209,7 +204,7 @@ fig.legend()'''
 # Specificerer stoerrelse til print, kan undvaeres
 fig1 = plt.figure(2, figsize = (496*1.3/139, 512*1.3/139), dpi = 139);
 plt.axis('off');
-plt.imshow(test_im);
+plt.imshow(test_im, cmap='gist_gray');
 plt.plot(x_test, y_test_unweighted, color="green", marker='o', markersize =2, label="Unweighted");
 plt.plot(x, y, color="blue", marker='o', markersize =2, label="RANSAC")
 
@@ -241,23 +236,28 @@ dirn = -n_roll_test # Offset with direction as sign
 n = testtest.shape[0]
 testtest[:,cols] = testtest[np.mod(np.arange(n)[:,None] + dirn,n),cols]
 
-plt.figure(3);plt.subplot(1,2,1);plt.imshow(test_im);
-plt.subplot(1,2,2);plt.imshow(testtest)
+plt.figure(3);plt.subplot(1,2,1);plt.imshow(test_im, cmap='gist_gray');
+plt.subplot(1,2,2);plt.imshow(testtest, cmap='gist_gray')
 
 
-''' Beskær billedet til 496x496 (KAN ÆNDRES) '''
-diff_hight = testtest.shape[0] - 496
-diff_width = testtest.shape[1] - 496
-start_hight = (int)(diff_hight/2)
+''' Beskær billedet til 512x496 '''
+diff_width = testtest.shape[1] - 512
+diff_hight = testtest.shape[0] - 496 #Kun få fra train DME vil have en højde (512) forskellig fra 496
 start_width = (int)(diff_width/2)
+start_hight = (int)(diff_hight/2)
 
-#crop_img = testtest[start_hight:(start_hight + 496),start_width:(start_width + 496)]  
+''' Beskærer med lige meget i hver side og i top og bund '''
+#crop_img = testtest[start_hight:(start_hight + 496),start_width:(start_width + 512)]  
+
+''' Beskærer billedet i højden kun fra bunden '''
+crop_img = testtest[0:496,start_width:(start_width + 512)]
 
 ''' Beskær billedet ud fra placeringen på bruchs membran, her specificerer vi til 300x496'''
-crop_img = testtest[(int)(y_akse_70 - 250):(int)(y_akse_70 + 50),start_width:(start_width + 496)] 
+#crop_img = testtest[(int)(y_akse_70 - 250):(int)(y_akse_70 + 50),start_width:(start_width + 496)] 
 
 plt.figure(4);plt.subplot(1,2,1);plt.imshow(crop_img);
 
+''' Fjerner de hvide hjørner, ved at sætte pixels til NAN '''
 nowhite_img = crop_img > 0.9
 for pred_region in ms.regionprops(ms.label(nowhite_img)):
     minr, minc, maxr, maxc = pred_region.bbox
