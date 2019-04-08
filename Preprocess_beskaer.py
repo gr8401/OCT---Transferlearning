@@ -34,7 +34,12 @@ Virker IKKE:
     DME-1966898-8.JPEG - finder poly det forkerte sted
     DME-1966898-10.JPEG - mangler meget kant, men den kan køre det, resultatet er bahh
     CNV-6666538-176.JPEG - finder ikke rigtig poly + meget bredt billede, så meget skæres væk
-
+    CNV-6666538-486 fordi membranen flyder ned ad
+    CNV-6666538-421 fordi membranen har et lineært stykke
+    CNV-6666538-176 fordi membranen ikke er så lys eller fordi billedet er lavt (har prøvet andre lave billeder, hvor den gerne vil, så det er nok ikke det der er problemet fx NORMAL-571157-34)
+    CNV-6581164-199 fordi membranen bølger ad helvedes til og er utydelig
+    CNV-6451562-27 fordi der er en kæmpe klump og fordi membranen er utydelig
+    DME-9939654-35 giver følgende fejl i koden: zero-size array to reduction operation maximum which has no identity - billedet har en kæmpe bule og utydelig membran
 Virker:
     DME-3064922-163.JPEG
     DME-3358004-28.JPEG
@@ -42,8 +47,8 @@ Virker:
     DME-3608465-33.JPEG
 '''
 
-path = '/home/nathalie/Documents/CellData/OCT/train/DME/'
-filename = os.path.join(path, 'DME-1597899-2.jpeg')
+path = '/home/nathalie/Documents/CellData/OCT/train/CNV/'
+filename = os.path.join(path, 'CNV-6581164-199.jpeg')
 test_im = io.imread(filename)
 test_im = test_im/(2**(8)-1) # normaliserer
 
@@ -194,18 +199,19 @@ dog_zeros = np.nonzero(dog)
 '''
 Saenker iterativt noedvendige antal punkter i parabelfittet indtil vi har et bestfit
 '''
-
-for i in reversed(range(50)):
-    bestfit = ppu.ransac_polyfit(dog_zeros[1], dog_zeros[0], n = i)
-    if bestfit is not None:
-        check = i
-        break
+try:
+    for i in reversed(range(50)):
+        bestfit = ppu.ransac_polyfit(dog_zeros[1], dog_zeros[0], n = i)
+        if bestfit is not None:
+            check = i
+            break
+        
+    poly = np.poly1d(bestfit)
     
-poly = np.poly1d(bestfit)
-
-x = np.linspace(0, test_im.shape[1], n_samples)
-y = poly(x)     
-
+    x = np.linspace(0, test_im.shape[1], n_samples)
+    y = poly(x)     
+except ValueError:
+    pass
 
 # Display
 '''fig, ax = plt.subplots(1, 1, figsize=(10, 5))
