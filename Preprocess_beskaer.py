@@ -42,8 +42,8 @@ Virker:
     DME-3608465-33.JPEG
 '''
 
-path = 'C:\\Users\\MetteToettrupGade\\Desktop\\CellData\\OCT\\train\\DME\\'
-filename = os.path.join(path, 'DME-3608465-33.JPEG')
+path = '/home/nathalie/Documents/CellData/OCT/train/DME/'
+filename = os.path.join(path, 'DME-1597899-2.jpeg')
 test_im = io.imread(filename)
 test_im = test_im/(2**(8)-1) # normaliserer
 
@@ -95,6 +95,7 @@ Er et af disse opfyldt, sae slet regionen i det filtrerede billede
 # Note! Kan effektiviseres
 plt.figure(1);plt.subplot(1,2,1);plt.imshow(dog)
 
+
 for pred_region in ms.regionprops(dog_label):
     # Finder koordinater for regionen
     Coord = pred_region.coords
@@ -116,12 +117,16 @@ pred_region = ms.regionprops(dog_label)
 Lav liste med alle centroider find max af liste samt index og brug det index til at 
 slette alle andre regioner undtagen dem som er indenfor 50 pixels vertikalt
 '''
+
 # Centroide array, samt max og Index
 cent_array = []
-for i in range(len(pred_region)):
-    cent_array.append(pred_region[i].centroid[0])
-Max = np.max(cent_array)    
-idx = np.argmax(cent_array)
+try:
+    for i in range(len(pred_region)):
+        cent_array.append(pred_region[i].centroid[0])
+    Max = np.max(cent_array)    
+    idx = np.argmax(cent_array)
+except ValueError: #catching the ValueError
+    pass #ignoring the error, here we must disselect the image and go to the next one
 
 '''
 Hvis Max-index er = iterations variable og laengde af centroide arrayet har samme laengde
@@ -143,6 +148,7 @@ for i in range(len(cent_array)-1):
         Coord2 = Coord[:, 1] 
         # Nu uden forloekke fjerner vi regionerne i oprindelige billede
         dog[Coord1, Coord2] = 0 
+    
 
 plt.subplot(1,2,2);plt.imshow(dog);
 
@@ -188,17 +194,18 @@ dog_zeros = np.nonzero(dog)
 '''
 Saenker iterativt noedvendige antal punkter i parabelfittet indtil vi har et bestfit
 '''
+
 for i in reversed(range(50)):
     bestfit = ppu.ransac_polyfit(dog_zeros[1], dog_zeros[0], n = i)
     if bestfit is not None:
         check = i
         break
-        
-
+    
 poly = np.poly1d(bestfit)
 
 x = np.linspace(0, test_im.shape[1], n_samples)
-y = poly(x)
+y = poly(x)     
+
 
 # Display
 '''fig, ax = plt.subplots(1, 1, figsize=(10, 5))
