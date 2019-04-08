@@ -6,6 +6,7 @@ Created on Tue Mar 19 15:23:14 2019
 """
 
 import numpy as np
+from skimage.filters import gaussian
 import warnings
 
 def feature(x, order=2):
@@ -15,6 +16,23 @@ def feature(x, order=2):
     """
     x = x.reshape(-1, 1)
     return np.power(x, np.arange(order+1).reshape(1, -1)) 
+
+def prep_im(im, thresh, col_to_remove):
+    # Anisotropic diffusions filtrering, kappa = 50, iteration n = 200
+    filtered_im = anisodiff(im, niter=200)
+    # DoG 
+    gaus1 = gaussian(filtered_im, sigma = 0.4)
+    gaus2 = gaussian(filtered_im, sigma = 0.6)
+    dog = gaus2-gaus1
+    # Thresholding
+    dog = dog < thresh
+    # Recasts DoG to int
+    dog = dog*1
+    #weights = im[dog] / float(im.max()) Indkommentér, hvis det betyder noget, samt i return statement
+    # Fjerner de yderste 5 soejler af pixels 
+    dog[:,0:col_to_remove] = 0
+    dog[:,dog.shape[1]-col_to_remove:dog.shape[1]] = 0
+    return dog#, weights
 
 
 def ransac_polyfit(x, y, order=2, n=50, k=100, t=50, d=100, f=0.8):
@@ -39,6 +57,41 @@ def ransac_polyfit(x, y, order=2, n=50, k=100, t=50, d=100, f=0.8):
         bestfit = bettermodel
         besterr = thiserr
   return bestfit
+
+def norm_poly_app(input_image, alpha):
+    # Get coordinates of pixels corresponding to marked region
+    X = np.argwhere(input_image)
+    
+    ''' Column indices     !!!! NOTE  Denne laver stadig en x-vektor, som ikke er integers!!!!
+    Dette mener jeg blev fikset i jeres version, men det volder ikke problemer pt. ellers tjek
+    Preprocess_Centroid
+    '''
+    x = X[:, 1].reshape(-1, 1)
+    # Row indices to predict. Note origin is at top left corner
+    y = X[:, 0]
+    
+    # Ridge regression, i.e., least squares with l2 regularization. 
+    # Should probably use a more numerically stable implementation, 
+    # e.g., that in Scikit-Learn
+    # alpha is regularization parameter. Larger alpha => less flexible curve
+    
+    
+    # Construct data matrix, A
+    order = 2
+    A = feature(x, order)
+    # w = inv (A^T A + alpha * I) A^T y
+    w_unweighted = np.linalg.pinv( A.T.dot(A) + alpha * np.eye(A.shape[1])).dot(A.T).dot(y)
+    
+    
+    # Generate test points
+    n_samples = input_image.shape[1]
+    x_test = np.linspace(0, input_image.shape[1]-1, n_samples)
+    X_test = feature(x_test, order)
+    
+    # Predict y coordinates at test points
+    y_test_unweighted = X_test.dot(w_unweighted)
+    return x_test, y_test_unweighted
+
 
 
 
@@ -167,3 +220,52 @@ def anisodiff(img,niter=1,kappa=50,gamma=0.1,step=(1.,1.),option=1,ploton=False)
                         # sleep(0.01)
  
         return imgout
+    
+def remove_based_centroid(pred_region, image):
+    '''
+    Lav liste med alle centroider find max af liste samt index og brug det index til at 
+    slette alle andre regioner undtagen dem som er indenfor 50 pixels vertikalt
+    '''
+    # Centroide array, samt max og Index
+    cent_array = []
+    for i in range(len(pred_region)):
+        cent_array.append(pred_region[i].centroid[0])
+    Max = np.max(cent_array)    
+    idx = np.argmax(cent_array)
+    
+    '''
+    Hvis Max-index er = iterations variable og laengde af centroide arrayet har samme laengde
+    Saa slut for loop
+    Hvis iterations variabel er stoerre eller lig med index og laengden af centroid variablen er 
+    laengere end iterationsvariablen, da laeg en til iterationsvariablen, saaledes vi
+    fortsaetter loopet indtil enden af centroide arrayet MEN IKKE SLETTER regionen ved max index
+    Slutteligt slettes regioner hvis de vertikalt afviger mere end 50 pixels (kan aendres)
+    '''
+    for i in range(len(cent_array)-1):
+        if i == idx and len(cent_array-1) == idx:
+            break
+        if i >= idx and len(cent_array-1) > i:
+            i = i + 1
+        if np.abs(pred_region[i].centroid[0]-Max) >50:
+            Coord = pred_region[i].coords
+            Coord1 = Coord[:, 0]
+            Coord2 = Coord[:, 1] 
+            # Nu uden forloekke fjerner vi regionerne i oprindelige billede
+            image[Coord1, Coord2] = 0 
+    return image
+
+def roll_im(y, im_to_roll):
+    '''
+    Ny forbedret rulle metode, resultat er det samme
+    sammenlign test_new med testtest, hvis i vil vaere sikre
+    '''
+    testtest = np.copy(im_to_roll)
+    n_roll_test = np.round(y[0]) - np.round(y[1:len(y)])
+    n_roll_test = n_roll_test.astype(int)
+    # Lav vektor mellem 0-laengde a billedet minus 1, som har antal punkter lig med laengden
+    x_col = np.linspace(0, im_to_roll.shape[1]-1, im_to_roll.shape[1]); x_col = x_col.astype(int)
+    cols = x_col[1:len(x_col)]  # Columns to be rolled
+    dirn = -n_roll_test # Offset with direction as sign
+    n = testtest.shape[0]
+    testtest[:,cols] = testtest[np.mod(np.arange(n)[:,None] + dirn,n),cols]
+    return testtest
