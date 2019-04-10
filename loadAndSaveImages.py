@@ -69,7 +69,7 @@ På 4 min kan den loade 10.000 billeder (der er 50.000 i træning normal), men b
 OBS: Billedepakken er cv og andre steder bruger vi skimage
 '''
 
-
+#Testbilleder er en mappe med tre billeder: DME-1001666-1.jpeg DRUSEN-1001666-1.jpeg NORMAL-1001666-1.jpeg
 img_dir = "/Users/tinajensen/Desktop/TestBilleder" 
 data_path = os.path.join(img_dir,'*g')
 files = glob.glob(data_path)
@@ -78,11 +78,12 @@ for f1 in files:
     img = cv2.imread(f1,0) #0 så det er gray scale
     data.append(img)
 
+
     #plt.imshow(img,cmap='gray') #cmap lig gray scale så de printes uden default color map
     #plt.show()
 
 
-#GEM DATA
+#GEM DATA (IKKE LABEL NAVN) - IKKE DET VI SKAL
 '''
 d = 0
 for img in data:
@@ -91,21 +92,63 @@ for img in data:
     d+=1
 '''
 
+
+'''
 d=0
 for img in data:
     filename = "/Users/tinajensen/Desktop/GemteBilleder/image_%d.jpg"%d #billeder hedder image_0, image_1 osv. Kan bare ændres her
     skimageio.imsave(filename, img)
     d+=1
-    
-    #skimageio.imsave("foo.tiff", A)
-    #A = skimageio.imread("foo.tiff")
+'''    
 
 
-#outfile = '%s/%s.jpg' % ('/Users/tinajensen/Desktop/GemteBilleder/mitBillede.png', f1 + str(datetime.now()))
-#cv2.imwrite(outfile, img)
+#GEM DATA (LABEL NAVN) - DET HER VI SKAL
+
+#MANGLER:
+#fix problem med rigtig billede/navn med indeksering 
+#gemme i new folder - vælg mappe hvor den skal gemme, ikke fokus filnavn
     
-    
-#cv2.imwrite('/Users/tinajensen/Desktop/GemteBilleder/mitBillede.png',img)
+
+'''
+#alle billeder med alle navne
+d=0
+for img in data:
+    for f1 in files:
+        filenameSave = f1.replace('.jpeg', 'preprocessed_%d.jpeg') %d
+        skimageio.imsave(filenameSave,img)
+        d+=1
+'''
+
+
+'''
+#Rigtig billeder, samme navn
+d=0
+for img in data:
+    filenameSave = f1.replace('.jpeg', 'preprocessed_%d.jpeg') %d
+    skimageio.imsave(filenameSave,img)
+    d+=1
+'''
+
+'''
+#Rigtig navn, samme billede for alle
+for f1 in files:
+    filenameSave = f1.replace('.jpeg', 'preprocessed.jpeg')
+    skimageio.imsave(filenameSave,img)
+'''
+
+
+
+#Udgangspunkt i rigtig navn, samme billede for alle
+for f1 in files:
+    filenameSave = f1.replace('.jpeg', 'preprocessed.jpeg')
+    skimageio.imsave(filenameSave,data[:])
+
+    #så skriver den problem med dtype, kan fixes ved:
+    #arrData = np.array(data)
+    #Og så skriv aeeData hvor der nu står data i imsave
+    #Men så siger den for mange input channels, fordi der er 3 billeder...
+    #ooog så er jeg tilbage ved brug for to for løkker og det virker ikke...
+
 
 
 
