@@ -70,10 +70,11 @@ OBS: Billedepakken er cv og andre steder bruger vi skimage
 '''
 
 #Testbilleder er en mappe med tre billeder: DME-1001666-1.jpeg DRUSEN-1001666-1.jpeg NORMAL-1001666-1.jpeg
-img_dir = "/Users/tinajensen/Desktop/TestBilleder" 
+img_dir = "/home/nathalie/Desktop/TestBilleder/" 
 data_path = os.path.join(img_dir,'*g')
 files = glob.glob(data_path)
 data = []
+
 for f1 in files:
     img = cv2.imread(f1,0) #0 så det er gray scale
     data.append(img)
@@ -136,12 +137,13 @@ for f1 in files:
     skimageio.imsave(filenameSave,img)
 '''
 
-
-
 #Udgangspunkt i rigtig navn, samme billede for alle
-for f1 in files:
-    filenameSave = f1.replace('.jpeg', 'preprocessed.jpeg')
-    skimageio.imsave(filenameSave,data[:])
+for f1 in range(len(files)):
+    if '-preprocessed' not in files[f1]:
+        skimageio.imsave(files[f1].replace('.jpeg', '-preprocessed.jpeg'),data[f1])
+    elif '-preprocessed' in files[f1]:
+        files.remove(files[f1])
+        
 
     #så skriver den problem med dtype, kan fixes ved:
     #arrData = np.array(data)
