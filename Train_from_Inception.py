@@ -44,6 +44,11 @@ validation_steps, validation_data = features_from_file('validation.h5', 'Validat
 
 inputs = Input(shape=(8, 8, 2048)) 
 x = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(inputs)
+x = Conv2D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(x)
+#x = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(x)
+x = MaxPooling2D(pool_size=(2, 2))(x)
+x = Conv2D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(x)
+x = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(x)
 #x = conv2d(inputs, 64, 1, 1)   ## Opmærksom her
 x = Dropout(0.5)(x) 
 x = Flatten()(x) 
@@ -66,7 +71,7 @@ callbacks = [
      factor=0.5, patience=5, min_lr=0.00005)
             ]
 
-with tf.device("/device:CPU:0"):
+with tf.device("/device:GPU:0"):
     history = model.fit_generator(
        generator=train_generator, 
        steps_per_epoch=train_steps_per_epoch,  
