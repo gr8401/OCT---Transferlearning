@@ -6,7 +6,11 @@ Created on Tue Mar 19 15:23:14 2019
 """
 
 import numpy as np
+import os
+import glob
+import cv2
 from skimage.filters import gaussian
+from skimage import io
 import warnings
 
 def feature(x, order=2):
@@ -242,9 +246,9 @@ def remove_based_centroid(pred_region, image):
     Slutteligt slettes regioner hvis de vertikalt afviger mere end 50 pixels (kan aendres)
     '''
     for i in range(len(cent_array)-1):
-        if i == idx and len(cent_array-1) == idx:
+        if i == idx and len(cent_array)-1 == idx:
             break
-        if i >= idx and len(cent_array-1) > i:
+        if i >= idx and len(cent_array)-1 > i:
             i = i + 1
         if np.abs(pred_region[i].centroid[0]-Max) >50:
             Coord = pred_region[i].coords
@@ -254,13 +258,15 @@ def remove_based_centroid(pred_region, image):
             image[Coord1, Coord2] = 0 
     return image
 
-def roll_im(y, im_to_roll):
+def roll_place_im(y, im_to_roll):
     '''
-    Ny forbedret rulle metode, resultat er det samme
-    sammenlign test_new med testtest, hvis i vil vaere sikre
+    Ny forbedret rulle metode, goer det samme, men med anden metodik
     '''
     testtest = np.copy(im_to_roll)
     n_roll_test = np.round(y[0]) - np.round(y[1:len(y)])
+    y_70 = np.round(im_to_roll.shape[0]*0.7) #rækken i billedet der svarer til 70%
+    move_bm = np.round(y_70 - y[0]) #forskellen fra poly placering og rækken svarende til 70%
+    n_roll_test = n_roll_test + move_bm #samlet flytning af membranen til rækken svarende til 70%
     n_roll_test = n_roll_test.astype(int)
     # Lav vektor mellem 0-laengde a billedet minus 1, som har antal punkter lig med laengden
     x_col = np.linspace(0, im_to_roll.shape[1]-1, im_to_roll.shape[1]); x_col = x_col.astype(int)
@@ -268,4 +274,36 @@ def roll_im(y, im_to_roll):
     dirn = -n_roll_test # Offset with direction as sign
     n = testtest.shape[0]
     testtest[:,cols] = testtest[np.mod(np.arange(n)[:,None] + dirn,n),cols]
-    return testtest
+    return testtest, n_roll_test
+
+def hitpixels(im_regions, x_to_hit, y_to_hit):
+    y_to_hit = np.round(y_to_hit)
+    y_to_hit = y_to_hit.astype(int)
+    x_to_hit = x_to_hit.astype(int)
+    if np.abs(np.max(x_to_hit)) > im_regions.shape[1] and np.abs(np.max(y_to_hit)) > im_regions.shape[0]:
+        x_to_hit[np.argwhere(x_to_hit > im_regions.shape[1])] = im_regions.shape[1]-1
+        y_to_hit[np.argwhere(y_to_hit > im_regions.shape[0])] = im_regions.shape[0]-1
+    Overlap1 = im_regions[y_to_hit, x_to_hit]
+    hitpixels = np.size(np.where(Overlap1 ==1))
+    return hitpixels
+
+def load(img_dir):
+    #img_dir = r'C:\\Users\\danie\\Desktop\\ST8\\Projekt\\Data\\OCT2017\\SaveTest\\' 
+    data_path = os.path.join(img_dir,'*g')
+    files = glob.glob(data_path)
+    data = []
+    
+    for f1 in files:
+        img = cv2.imread(f1,0) #0 så det er gray scale
+        data.append(img)
+    return data, files
+
+def save(filepaths, data, sav_dir):
+    #for f1 in range(len(filepaths)):
+    filepaths = filepaths.replace('SaveTest', sav_dir)
+    #if '-preprocessed' not in files[f1]:
+    try:
+        os.remove(filepaths.replace('.jpeg', '-preprocessed.jpeg'))
+    except FileNotFoundError:
+        pass
+    io.imsave(filepaths.replace('.jpeg', '-preprocessed.jpeg'),data)

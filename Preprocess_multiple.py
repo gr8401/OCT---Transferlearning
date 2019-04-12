@@ -15,6 +15,7 @@ import skimage.measure as ms
 import numpy as np
 from sklearn.metrics import confusion_matrix
 import scipy.signal as sc
+from tqdm import tqdm
 
 import matplotlib.pyplot as plt
 
@@ -23,12 +24,14 @@ import matplotlib.pyplot as plt
 # DME-306172-20
 # DRUSEN.JPG
 # CNV-6666538-176   # CNV-6666538-421
+
+'''
 path = 'C:\\Users\\danie\\Desktop\\Misc\\ST7\\OCT---Transferlearning\\'
 filename = os.path.join(path, 'CNV-6666538-421.JPEG')
 #filename = 'C:\\Users\\danie\\Desktop\\ST8\\Projekt\\Data\\NORMAL-1001666-1.jpg'
 test_im = io.imread(filename)
 test_im = test_im/(2**(8)-1) # normaliserer
-
+'''
 #test_med = sc.medfilt(test_im, 7)
 
 def main_test(test_im, threshold):
@@ -65,7 +68,7 @@ def main_test(test_im, threshold):
     Er et af disse opfyldt, sae slet regionen i det filtrerede billede
     ### NYT ### Nu slettes der ogsae i regions billedet med henblik paa en sekundaer fjerning af billeder senere
     '''
-    plt.figure(1);plt.subplot(1,2,1);plt.imshow(dog)
+    #plt.figure(1);plt.subplot(1,2,1);plt.imshow(dog)
     
     for pred_region in ms.regionprops(dog_label):
         #minr, minc, maxr, maxc = pred_region.bbox
@@ -89,7 +92,7 @@ def main_test(test_im, threshold):
     dog = ppu.remove_based_centroid(pred_region, dog)
     
     
-    plt.subplot(1,2,2);plt.imshow(dog);
+    #plt.subplot(1,2,2);plt.imshow(dog);
     
     
     # Normal polynomie tilgang
@@ -118,36 +121,51 @@ def main_test(test_im, threshold):
     
     # Display
     # Specificerer stoerrelse til print, kan undvaeres
+    '''
     fig1 = plt.figure(2, figsize = (496*1.3/139, 512*1.3/139), dpi = 139);
     plt.axis('off');
     plt.imshow(test_im);
     plt.plot(x_test, y_test_unweighted, color="green", marker='o', markersize =2, label="Unweighted");
     plt.plot(x, y, color="blue", marker='o', markersize =2, label="RANSAC")
+    '''
     return dog, x, y
 
-threshold = -0.00018
-dog, x, y = main_test(test_im, threshold)
+img_dir = 'C:\\Users\\danie\\Desktop\\ST8\\Projekt\\Data\\OCT2017\\SaveTest\\'
+data, files = ppu.load(img_dir)
 
 
-# Finder hvor mange pixels af vores polynomie rammer den paagaeldende region
-hitpixels = ppu.hitpixels(dog, x, y)
-hitpixels_perc = hitpixels/test_im.shape[1]
-# Indsaet tjek om antal hitpixels og hvis ikke, forsoeg igen?
-for i in range(1,4):
-    if hitpixels_perc < 0.5:
-        dog, x, y = main_test(test_im, threshold+0.00002*i)
-        hitpixels = ppu.hitpixels(dog, x, y)
+for f1 in tqdm(range(len(data))):
+    data[f1] = data[f1]/(2**(8)-1)
+    threshold = -0.00018
+    dog, x, y = main_test(data[f1], threshold)
+    
+    
+    # Finder hvor mange pixels af vores polynomie rammer den paagaeldende region
+    hitpixels = ppu.hitpixels(dog, x, y)
+    hitpixels_perc = hitpixels/dog.shape[1]
+    '''
+    # Indsaet tjek om antal hitpixels og hvis ikke, forsoeg igen?
+    for i in range(1,4):
+        if hitpixels_perc < 0.5:
+            dog, x, y = main_test(data[f1], threshold+0.00002*i)
+            hitpixels = ppu.hitpixels(dog, x, y)
+        else:
+            break
+    '''    
+    if hitpixels_perc > 0.5:
+        # Ruller billedet, rullet_billede = roll_im(y_koordinater, inputbillede)
+        rolled_im, n_roll_test = ppu.roll_place_im(y, data[f1])
+        ppu.save(files[f1],rolled_im, 'Good_pre')
     else:
-        break
-if hitpixels_perc > 0.5:
-    # Ruller billedet, rullet_billede = roll_im(y_koordinater, inputbillede)
-    rolled_im, n_roll_test = ppu.roll_place_im(y, test_im)
+        #rolled_im, n_roll_test = ppu.roll_place_im(y, data[f1])
+        ppu.save(files[f1], data[f1], 'Bad_pre')
+    
 
 # Gem billede
-
-    plt.figure(3);plt.subplot(1,2,1);plt.imshow(test_im);
-    plt.subplot(1,2,2);plt.imshow(rolled_im)
-
+'''
+plt.figure(3);plt.subplot(1,2,1);plt.imshow(test_im);
+plt.subplot(1,2,2);plt.imshow(rolled_im)
+'''
 
 
 
