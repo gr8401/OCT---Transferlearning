@@ -45,11 +45,37 @@ for f in DME_source:
         shutil.move('C:\\Users\\MetteToettrupGade\\Desktop\\BillederKodetest\\DME\\'+f, DME_val)
 
 
+### DRUSEN ###
+DRUSEN_source = os.listdir('C:\\Users\\MetteToettrupGade\\Desktop\\BillederKodetest\\DRUSEN\\')
+try:
+    os.makedirs('C:\\Users\\MetteToettrupGade\\Desktop\\BillederKodetest\\DRUSEN_val\\')
+except OSError:
+    pass
 
-'''
-DRUSEN = os.listdir('C:\\Users\\MetteToettrupGade\\Desktop\\BillederKodetest\\DRUSEN') # DRUSEN directory path
-DRUSEN_number_files = len(DRUSEN)
+DRUSEN_val = 'C:\\Users\\MetteToettrupGade\\Desktop\\BillederKodetest\\DRUSEN_val\\'
 
-NORMAL = os.listdir('C:\\Users\\MetteToettrupGade\\Desktop\\BillederKodetest\\NORMAL') # NORMAL directory path
-NORMAL_number_files = len(NORMAL)
-'''
+DRUSEN_number_files = int(len(DRUSEN_source)) #Number of files in folder
+DRUSEN_val20 = round(DRUSEN_number_files/100*20) #Randomly, choosing 20 %
+DRUSEN_sampling = random.sample(DRUSEN_source, k=DRUSEN_val20)
+
+for f in DRUSEN_source:
+    if f in DRUSEN_sampling:
+        shutil.move('C:\\Users\\MetteToettrupGade\\Desktop\\BillederKodetest\\DRUSEN\\'+f, DRUSEN_val)
+
+
+### NORMAL ###
+NORMAL_source = os.listdir('C:\\Users\\MetteToettrupGade\\Desktop\\BillederKodetest\\NORMAL') # NORMAL directory path
+try:
+    os.makedirs('C:\\Users\\MetteToettrupGade\\Desktop\\BillederKodetest\\NORMAL_val\\')
+except OSError:
+    pass
+
+NORMAL_val = 'C:\\Users\\MetteToettrupGade\\Desktop\\BillederKodetest\\NORMAL_val\\'
+
+NORMAL_number_files = int(len(NORMAL_source)) #Number of files in folder
+NORMAL_val20 = round(NORMAL_number_files/100*20) #Randomly, choosing 20 %
+NORMAL_sampling = random.sample(NORMAL_source, k=NORMAL_val20)
+
+for f in NORMAL_source:
+    if f in NORMAL_sampling:
+        shutil.move('C:\\Users\\MetteToettrupGade\\Desktop\\BillederKodetest\\NORMAL\\'+f, NORMAL_val)
