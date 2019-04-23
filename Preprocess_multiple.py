@@ -139,6 +139,11 @@ good_path = 'Norm_good'
 bad_path = 'Norm_bad'
 data, files = ppu.load(img_dir)
 
+# Genoptag fra fejl, her skal fejlnr gerne vaere et par numre mindre end aktuelt
+fejlnr = 1650
+data = data[fejlnr:len(data)]
+files = files[fejlnr:len(files)]
+
 
 for f1 in tqdm(range(len(data))):
     data[f1] = data[f1]/(2**(8)-1)

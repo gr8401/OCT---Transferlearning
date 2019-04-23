@@ -314,10 +314,15 @@ def hitpixels(im_regions, x_to_hit, y_to_hit):
     y_to_hit = np.round(y_to_hit)
     y_to_hit = y_to_hit.astype(int)
     x_to_hit = x_to_hit.astype(int)
-    if np.abs(np.max(x_to_hit)) > im_regions.shape[1]:
+    if np.abs(np.max(x_to_hit)) >= im_regions.shape[1]:
         x_to_hit[np.argwhere(x_to_hit >= im_regions.shape[1])] = im_regions.shape[1]-1
-    if np.abs(np.max(y_to_hit)) > im_regions.shape[0]:
+    if np.abs(np.max(y_to_hit)) >= im_regions.shape[0]:
         y_to_hit[np.argwhere(y_to_hit >= im_regions.shape[0])] = im_regions.shape[0]-1
+    if np.min(x_to_hit) < 0:
+        x_to_hit[np.argwhere(x_to_hit < 0)] = 0
+    if np.min(y_to_hit) < 0:
+        y_to_hit[np.argwhere(y_to_hit < 0)] = 0
+    
     Overlap = im_regions[y_to_hit, x_to_hit]
     hitpixels = np.size(np.where(Overlap ==1))
     return hitpixels
