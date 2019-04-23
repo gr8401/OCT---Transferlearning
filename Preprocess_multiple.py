@@ -134,7 +134,9 @@ def main_test(test_im, threshold):
     '''
     return dog, x, y, NoneAlarm
 
-img_dir = 'C:\\Users\\danie\\Desktop\\ST8\\Projekt\\Data\\OCT2017\\SaveTest\\'
+img_dir = 'C:\\Users\\danie\\Desktop\\ST8\\Projekt\\Data\\OCT2017\\val_preprocess\\NORMAL_val\\'
+good_path = 'Norm_good'
+bad_path = 'Norm_bad'
 data, files = ppu.load(img_dir)
 
 
@@ -143,7 +145,7 @@ for f1 in tqdm(range(len(data))):
     threshold = -0.00018
     dog, x, y, NoneAlarm = main_test(data[f1], threshold)
     if NoneAlarm:
-        ppu.save(files[f1], data[f1], 'Bad_pre')
+        ppu.save(files[f1], data[f1], bad_path)
         continue
     
     # Finder hvor mange pixels af vores polynomie rammer den paagaeldende region
@@ -158,14 +160,14 @@ for f1 in tqdm(range(len(data))):
         else:
             break
     '''    
-    if hitpixels_perc > 0.5:
+    if hitpixels_perc > 0.4:
         # Ruller billedet, rullet_billede = roll_im(y_koordinater, inputbillede)
         rolled_im, n_roll_test = ppu.roll_place_im(y, data[f1])
         crop_roll_im = ppu.crop(rolled_im)
-        ppu.save(files[f1],crop_roll_im, 'Good_pre')
+        ppu.save(files[f1],crop_roll_im, good_path)
     else:
         #rolled_im, n_roll_test = ppu.roll_place_im(y, data[f1])
-        ppu.save(files[f1], data[f1], 'Bad_pre')
+        ppu.save(files[f1], data[f1], bad_path)
     
 
 # Gem billede

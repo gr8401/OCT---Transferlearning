@@ -345,7 +345,7 @@ def load(img_dir):
 
 def save(filepaths, data, sav_dir):
     #for f1 in range(len(filepaths)):
-    filepaths = filepaths.replace('SaveTest', sav_dir)
+    filepaths = filepaths.replace('NORMAL_val', sav_dir)
     #if '-preprocessed' not in files[f1]:
     try:
         os.remove(filepaths.replace('.jpeg', '-preprocessed.jpeg'))
