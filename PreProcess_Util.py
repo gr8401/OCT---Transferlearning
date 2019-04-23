@@ -9,6 +9,7 @@ import numpy as np
 import os
 import glob
 import cv2
+import skimage.measure as ms
 from skimage.filters import gaussian
 from skimage import io
 import warnings
@@ -21,25 +22,52 @@ def feature(x, order=2):
     x = x.reshape(-1, 1)
     return np.power(x, np.arange(order+1).reshape(1, -1)) 
 
-def prep_im(im, thresh, col_to_remove):
+def prep_im(im, thresh, col_to_remove):   
+    # Remove low or top artifacts
+    test_im2 = im >0.9
+
+    for pred_region in ms.regionprops(ms.label(test_im2)):
+        minr, minc, maxr, maxc = pred_region.bbox
+        if maxr >len(im)-1:# or minr == 0:
+            # Finder koordinater for regionen
+            Coord = pred_region.coords
+            '''
+            insertvector = np.ones([test_im2.shape[1],2], dtype = int)
+            insertvector[:,0] = insertvector[:,0]*(Coord[0,0]-1)
+            insertvector[:,1] = np.linspace(0, test_im2.shape[1]-1, test_im2.shape[1])
+            Coord = np.append(insertvector, Coord, axis = 0)
+            '''
+            Coord_1 = Coord.copy()
+            Coord_1[:,0] = Coord_1[:,0]-1
+            Coord = np.append(Coord_1, Coord, axis = 0)
+            
+            Coord1 = Coord[:, 0]
+            Coord2 = Coord[:, 1]
+            im[Coord1, Coord2] = 0
+            '''
+            test_im3 = im > 0.6
+            for pred_region in ms.regionprops(ms.label(test_im3[Coord[0,0]:test_im3.shape[1],:])):
+                Coord_rand = pred_region.coords
+                im[Coord_rand[:,0], Coord_rand[:,1]] = 0
+            '''
+    
     # Anisotropic diffusions filtrering, kappa = 50, iteration n = 200
-    filtered_im = anisodiff(im, niter=200)
+    filtered_im = anisodiff(im, niter=100)
     # DoG 
     gaus1 = gaussian(filtered_im, sigma = 0.4)
     gaus2 = gaussian(filtered_im, sigma = 0.6)
     dog = gaus2-gaus1
     # Thresholding
     dog = dog < thresh
-    # Recasts DoG to int
-    dog = dog*1
-    #weights = im[dog] / float(im.max()) Indkommentér, hvis det betyder noget, samt i return statement
     # Fjerner de yderste 5 soejler af pixels 
     dog[:,0:col_to_remove] = 0
-    dog[:,dog.shape[1]-col_to_remove:dog.shape[1]] = 0
-    return dog#, weights
+    dog[:,im.shape[1]-col_to_remove:im.shape[1]] = 0
+    # Recasts DoG to int
+    dog = dog*1
+    return dog
 
 
-def ransac_polyfit(x, y, order=2, n=50, k=100, t=50, d=100, f=0.8):
+def ransac_polyfit(x, y, order=2, n=50, k=20, t=50, d=100, f=0.8):
   # Thanks https://en.wikipedia.org/wiki/Random_sample_consensus
   
   # n – minimum number of data points required to fit the model
@@ -236,6 +264,8 @@ def remove_based_centroid(pred_region, image):
         cent_array.append(pred_region[i].centroid[0])
     Max = np.max(cent_array)    
     idx = np.argmax(cent_array)
+    minr = np.min(pred_region[idx].coords[:,1])
+    maxr = np.max(pred_region[idx].coords[:,1])
     
     '''
     Hvis Max-index er = iterations variable og laengde af centroide arrayet har samme laengde
@@ -250,7 +280,7 @@ def remove_based_centroid(pred_region, image):
             break
         if i >= idx and len(cent_array)-1 > i:
             i = i + 1
-        if np.abs(pred_region[i].centroid[0]-Max) >50:
+        if np.abs(pred_region[i].centroid[0]-Max) >50:# or minr < pred_region[i].centroid[1] < maxr:
             Coord = pred_region[i].coords
             Coord1 = Coord[:, 0]
             Coord2 = Coord[:, 1] 
@@ -280,11 +310,12 @@ def hitpixels(im_regions, x_to_hit, y_to_hit):
     y_to_hit = np.round(y_to_hit)
     y_to_hit = y_to_hit.astype(int)
     x_to_hit = x_to_hit.astype(int)
-    if np.abs(np.max(x_to_hit)) > im_regions.shape[1] and np.abs(np.max(y_to_hit)) > im_regions.shape[0]:
-        x_to_hit[np.argwhere(x_to_hit > im_regions.shape[1])] = im_regions.shape[1]-1
-        y_to_hit[np.argwhere(y_to_hit > im_regions.shape[0])] = im_regions.shape[0]-1
-    Overlap1 = im_regions[y_to_hit, x_to_hit]
-    hitpixels = np.size(np.where(Overlap1 ==1))
+    if np.abs(np.max(x_to_hit)) > im_regions.shape[1]:
+        x_to_hit[np.argwhere(x_to_hit >= im_regions.shape[1])] = im_regions.shape[1]-1
+    if np.abs(np.max(y_to_hit)) > im_regions.shape[0]:
+        y_to_hit[np.argwhere(y_to_hit >= im_regions.shape[0])] = im_regions.shape[0]-1
+    Overlap = im_regions[y_to_hit, x_to_hit]
+    hitpixels = np.size(np.where(Overlap ==1))
     return hitpixels
 
 def load(img_dir):

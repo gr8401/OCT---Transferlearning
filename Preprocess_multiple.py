@@ -113,11 +113,15 @@ def main_test(test_im, threshold):
         if bestfit is not None:
             #check = i
             break
-            
-    poly = np.poly1d(bestfit)
-    
-    x = np.linspace(0, test_im.shape[1]-1, test_im.shape[1])
-    y = poly(x)
+    if bestfit is None:
+        NoneAlarm = True
+        x = 1
+        y = 1
+    else:
+        poly = np.poly1d(bestfit)
+        NoneAlarm = False
+        x = np.linspace(0, test_im.shape[1]-1, test_im.shape[1])
+        y = poly(x)
     
     # Display
     # Specificerer stoerrelse til print, kan undvaeres
@@ -128,7 +132,7 @@ def main_test(test_im, threshold):
     plt.plot(x_test, y_test_unweighted, color="green", marker='o', markersize =2, label="Unweighted");
     plt.plot(x, y, color="blue", marker='o', markersize =2, label="RANSAC")
     '''
-    return dog, x, y
+    return dog, x, y, NoneAlarm
 
 img_dir = 'C:\\Users\\danie\\Desktop\\ST8\\Projekt\\Data\\OCT2017\\SaveTest\\'
 data, files = ppu.load(img_dir)
@@ -137,8 +141,9 @@ data, files = ppu.load(img_dir)
 for f1 in tqdm(range(len(data))):
     data[f1] = data[f1]/(2**(8)-1)
     threshold = -0.00018
-    dog, x, y = main_test(data[f1], threshold)
-    
+    dog, x, y, NoneAlarm = main_test(data[f1], threshold)
+    if NoneAlarm:
+        continue
     
     # Finder hvor mange pixels af vores polynomie rammer den paagaeldende region
     hitpixels = ppu.hitpixels(dog, x, y)

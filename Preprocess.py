@@ -22,26 +22,16 @@ import matplotlib.pyplot as plt
 # DRUSEN-1047803-4
 # DME-306172-20
 # DRUSEN.JPG
-# CNV-6666538-176   # CNV-6666538-421
+# CNV-6666538-176  Langt billede   # CNV-6666538-421
 path = 'C:\\Users\\danie\\Desktop\\Misc\\ST7\\OCT---Transferlearning\\'
-filename = os.path.join(path, 'CNV-6666538-421.JPEG')
+filename = os.path.join(path, 'NORMAL-1081406-4.JPEG')
 #filename = 'C:\\Users\\danie\\Desktop\\ST8\\Projekt\\Data\\NORMAL-1001666-1.jpg'
 test_im = io.imread(filename)
 test_im = test_im/(2**(8)-1) # normaliserer
 
 #test_med = sc.medfilt(test_im, 7)
 
-def main_test(test_im, threshold):
-    test_im2 = test_im >0.9
-    for pred_region in ms.regionprops(ms.label(test_im2)):
-        minr, minc, maxr, maxc = pred_region.bbox
-        if maxr >len(test_im)-1 or minr == 0:
-            # Finder koordinater for regionen
-            Coord = pred_region.coords
-            Coord1 = Coord[:, 0]
-            Coord2 = Coord[:, 1]
-            test_im[Coord1, Coord2] = 0
-    
+def main_test(test_im, threshold):  
     # Forbered billedet med threshold og søjle fjernelse
     # Output = (input_image, threshold, # of columns to remove at edge of picture)
     dog = ppu.prep_im(test_im, threshold, 5)
@@ -110,7 +100,8 @@ def main_test(test_im, threshold):
         if bestfit is not None:
             #check = i
             break
-            
+
+        
     poly = np.poly1d(bestfit)
     
     x = np.linspace(0, test_im.shape[1]-1, test_im.shape[1])
@@ -136,7 +127,7 @@ hitpixels_perc = hitpixels/test_im.shape[1]
 for i in range(1,4):
     if hitpixels_perc < 0.5:
         dog, x, y = main_test(test_im, threshold+0.00002*i)
-        hitpixels = ppu.hitpixels(dog, x, y)
+        hitpixels_perc = ppu.hitpixels(dog, x, y)/test_im.shape[1]
     else:
         break
 if hitpixels_perc > 0.5:
