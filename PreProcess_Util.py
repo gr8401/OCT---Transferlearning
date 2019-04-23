@@ -26,6 +26,8 @@ def prep_im(im, thresh, col_to_remove):
     # Remove low or top artifacts
     test_im2 = im >0.9
 
+    test_im2[:,0:col_to_remove-4] = 0
+    test_im2[:,im.shape[1]-col_to_remove+4:im.shape[1]] = 0
     for pred_region in ms.regionprops(ms.label(test_im2)):
         minr, minc, maxr, maxc = pred_region.bbox
         if maxr >len(im)-1:# or minr == 0:
@@ -80,6 +82,8 @@ def ransac_polyfit(x, y, order=2, n=50, k=20, t=50, d=100, f=0.8):
   bestfit = None
   for kk in range(k):
     maybeinliers = np.random.randint(len(x), size=n)
+    if n == 0:
+        break
     maybemodel = np.polyfit(x[maybeinliers], y[maybeinliers], order)
     alsoinliers = np.abs(np.polyval(maybemodel, x)-y) < t
     if sum(alsoinliers) > d and sum(alsoinliers) > len(x)*f:
@@ -317,6 +321,16 @@ def hitpixels(im_regions, x_to_hit, y_to_hit):
     Overlap = im_regions[y_to_hit, x_to_hit]
     hitpixels = np.size(np.where(Overlap ==1))
     return hitpixels
+
+def crop(im):
+    diff_width = im.shape[1] - 512
+    start_width = (int)(diff_width/2)
+    
+    # Beskaerer i bunden og lige meget i hver side til 496x512
+    crop_img = im[0:496,start_width:(start_width + 512)]
+    
+    return crop_img
+    
 
 def load(img_dir):
     #img_dir = r'C:\\Users\\danie\\Desktop\\ST8\\Projekt\\Data\\OCT2017\\SaveTest\\' 

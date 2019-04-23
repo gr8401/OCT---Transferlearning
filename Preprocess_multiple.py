@@ -143,6 +143,7 @@ for f1 in tqdm(range(len(data))):
     threshold = -0.00018
     dog, x, y, NoneAlarm = main_test(data[f1], threshold)
     if NoneAlarm:
+        ppu.save(files[f1], data[f1], 'Bad_pre')
         continue
     
     # Finder hvor mange pixels af vores polynomie rammer den paagaeldende region
@@ -160,7 +161,8 @@ for f1 in tqdm(range(len(data))):
     if hitpixels_perc > 0.5:
         # Ruller billedet, rullet_billede = roll_im(y_koordinater, inputbillede)
         rolled_im, n_roll_test = ppu.roll_place_im(y, data[f1])
-        ppu.save(files[f1],rolled_im, 'Good_pre')
+        crop_roll_im = ppu.crop(rolled_im)
+        ppu.save(files[f1],crop_roll_im, 'Good_pre')
     else:
         #rolled_im, n_roll_test = ppu.roll_place_im(y, data[f1])
         ppu.save(files[f1], data[f1], 'Bad_pre')
