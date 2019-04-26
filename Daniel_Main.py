@@ -3,6 +3,11 @@
 Created on Fri Mar 15 09:42:34 2019
 
 @author: Daniel_Ramsing
+
+Implementation details from:
+    http://blog.mapshalli.org/index.php/2018/03/21/faster-and-better-transfer-learning-training-with-deep-neural-networks-ai-to-detect-eye-diseases/    
+    https://github.com/shivshankar20/eyediseases-AI-keras-imagenet-inception
+        
 """
 from __future__ import print_function
 from keras.applications.inception_v3 import InceptionV3
@@ -14,14 +19,16 @@ import numpy as np
 from keras.preprocessing.image import ImageDataGenerator
 import h5py
 
-
+# Load base model, Inception without top, mixed layer 9
 conv_base = InceptionV3(weights='imagenet', include_top=False)
 
-
+# Directory setup - Train and validation directories
 train_dir = r'C:\Users\Daniel Ramsing\Documents\GitHub\OCT---Transferlearning\images\CellData\OCT\train' 
 validation_dir = r'C:\Users\Daniel Ramsing\Documents\GitHub\OCT---Transferlearning\images\CellData\OCT\test'
 
-
+'''
+Predict from base model in h5 dataset and save these features
+'''
 
 def extract_features(file_name, directory, key, 
    sample_count, target_size, batch_size, 

@@ -3,6 +3,14 @@
 Created on Thu Apr 25 09:10:11 2019
 
 @author: Daniel_Ramsing
+
+Inspired by: 
+    RISE: Randomized Input Sampling for Explanation of Black-box Models
+    arXiv:1806.07421v3
+    
+And using implementation details from:
+    https://github.com/eclique/RISE
+    https://github.com/shivshankar20/eyediseases-AI-keras-imagenet-inception
 """
 
 import os
@@ -33,7 +41,7 @@ from skimage.transform import resize
 classes = ['CNV', 'DME', 'DRUSEN', 'NORMAL']
 
 # Path to image(s)
-path = r'./images/CellData/OCT/Preprocessed/validation/CNV/CNV-81630-49-preprocessed.jpeg'
+path = r'C:\Users\danie\Desktop\Misc\ST7\OCT---Transferlearning\DRUSEN-1047803-4-preprocessed.jpeg'
 
 
 # load base model --> Inceptionv3
@@ -49,7 +57,7 @@ img_target_size = (512,496)
 batch_size = 100
 
 # Mask variables:
-N = 2000            # number of masks to generate
+N = 1000            # number of masks to generate
 s = 8               # who knows
 p1 = 0.5            # who knows
 
@@ -70,6 +78,7 @@ def predict_img(img_as_array):
     
     return pred
     
+# Generate random masks to obscure parts of input image
 def generate_masks(N, s, p1):
     cell_size = np.ceil(np.array(img_target_size) / s)
     up_size = (s + 1) * cell_size
@@ -95,22 +104,22 @@ Explain function, input:
 x = image as array
 masks = generated masks
 
-Multiplies masks and images, then predicts in batches and finally produces one saliency map through linear algebra
+Multiplies masks and images, then predicts in batches and finally produces a saliency map for each class,
+through linear algebra (dot product)
 '''
 def explain(x, masks):
-    #preds = []
-    # If not workinng, check if multiplying correct axes!
+    preds = []
+    # If not working, check if multiplying correct axes!
     masked = x * masks
-    '''
-    for i in tqdm(range(0,N, batch_size), desc = 'Predicting on masked images...'):
+    
+    for i in tqdm(range(0, N, batch_size), desc = 'Predicting on masked images...'):
         # add masked predictions to list in batches of 'batch_size' up to total masks
-        preds.append(predict_img(masked[i:min(batch_size, N)]), axis = 0)
-    '''
-    preds = predict_img(masked[0:N])
+        preds.append(predict_img(masked[i:min(i+batch_size, N)]))
+    
     # organize all predicted masks in matrix
     preds = np.concatenate(preds)
     # produce one saliency map by dot product between masks
-    sal_map = preds.T.dot(masks.reshape(N,-1).reshape(-1,*img_target_size))
+    sal_map = preds.T.dot(masks.reshape(N,-1)).reshape(-1,*img_target_size)
     sal_map = sal_map/N/p1
     
     return sal_map
@@ -130,9 +139,15 @@ masks = generate_masks(N, s, p1)
 sal_map = explain(x, masks)
 
 Pred_prob = predict_img(x)
+Pred_prob = Pred_prob.reshape(len(classes))
 class_idx = np.argmax(Pred_prob)
+
+
 print('Image prediction was:')
-print()
+print(classes[class_idx] + '\n')
+print('with probability:')
+print(Pred_prob[class_idx])
+
 
 plt.figure
 plt.axis('off')

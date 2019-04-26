@@ -31,7 +31,7 @@ def prep_im(im, thresh, col_to_remove):
     for pred_region in ms.regionprops(ms.label(test_im2)):
         minr, minc, maxr, maxc = pred_region.bbox
         if maxr >len(im)-1:# or minr == 0:
-            # Finder koordinater for regionen
+            # Coordinates for region
             Coord = pred_region.coords
             '''
             insertvector = np.ones([test_im2.shape[1],2], dtype = int)
@@ -39,6 +39,7 @@ def prep_im(im, thresh, col_to_remove):
             insertvector[:,1] = np.linspace(0, test_im2.shape[1]-1, test_im2.shape[1])
             Coord = np.append(insertvector, Coord, axis = 0)
             '''
+            # Subtract one to every coordinate to remove "fuzzy" edge of bottom regions
             Coord_1 = Coord.copy()
             Coord_1[:,0] = Coord_1[:,0]-1
             Coord = np.append(Coord_1, Coord, axis = 0)
@@ -61,7 +62,7 @@ def prep_im(im, thresh, col_to_remove):
     dog = gaus2-gaus1
     # Thresholding
     dog = dog < thresh
-    # Fjerner de yderste 5 soejler af pixels 
+    # Column removal 
     dog[:,0:col_to_remove] = 0
     dog[:,im.shape[1]-col_to_remove:im.shape[1]] = 0
     # Recasts DoG to int
@@ -259,17 +260,17 @@ def anisodiff(img,niter=1,kappa=50,gamma=0.1,step=(1.,1.),option=1,ploton=False)
     
 def remove_based_centroid(pred_region, image):
     '''
-    Lav liste med alle centroider find max af liste samt index og brug det index til at 
-    slette alle andre regioner undtagen dem som er indenfor 50 pixels vertikalt
+    Construct list of centroids, find max and index of max.
+    Use said index to remove every other region except ones within 5 pixels vertically
     '''
-    # Centroide array, samt max og Index
+    # Centroid array, max and Index
     cent_array = []
     for i in range(len(pred_region)):
         cent_array.append(pred_region[i].centroid[0])
     Max = np.max(cent_array)    
     idx = np.argmax(cent_array)
-    minr = np.min(pred_region[idx].coords[:,1])
-    maxr = np.max(pred_region[idx].coords[:,1])
+    #minr = np.min(pred_region[idx].coords[:,1])
+    #maxr = np.max(pred_region[idx].coords[:,1])
     
     '''
     Hvis Max-index er = iterations variable og laengde af centroide arrayet har samme laengde
@@ -294,18 +295,21 @@ def remove_based_centroid(pred_region, image):
 
 def roll_place_im(y, im_to_roll):
     '''
-    Ny forbedret rulle metode, goer det samme, men med anden metodik
+    New improved roll method, same results as np.roll, but faster and
+    somehow more reliable
+    Rolls image to a flat Bruch's Membrane and sets it at 30% image height
     '''
     testtest = np.copy(im_to_roll)
     n_roll_test = np.round(y[0]) - np.round(y[1:len(y)])
-    y_70 = np.round(im_to_roll.shape[0]*0.7) #rækken i billedet der svarer til 70%
+    y_70 = np.round(im_to_roll.shape[0]*0.7) #row equal to 30% of image height (reverse in matrix notation)
     move_bm = np.round(y_70 - y[0]) #forskellen fra poly placering og rækken svarende til 70%
-    n_roll_test = n_roll_test + move_bm #samlet flytning af membranen til rækken svarende til 70%
+    n_roll_test = n_roll_test + move_bm #Move all columns to 30% image height
     n_roll_test = n_roll_test.astype(int)
+    
     # Lav vektor mellem 0-laengde a billedet minus 1, som har antal punkter lig med laengden
     x_col = np.linspace(0, im_to_roll.shape[1]-1, im_to_roll.shape[1]); x_col = x_col.astype(int)
     cols = x_col[1:len(x_col)]  # Columns to be rolled
-    dirn = -n_roll_test # Offset with direction as sign
+    dirn = -n_roll_test         # Offset with direction as sign
     n = testtest.shape[0]
     testtest[:,cols] = testtest[np.mod(np.arange(n)[:,None] + dirn,n),cols]
     return testtest, n_roll_test
@@ -314,6 +318,7 @@ def hitpixels(im_regions, x_to_hit, y_to_hit):
     y_to_hit = np.round(y_to_hit)
     y_to_hit = y_to_hit.astype(int)
     x_to_hit = x_to_hit.astype(int)
+    # If polynomial goes ouotsideimage boundaries, reset to max or min value respectively
     if np.abs(np.max(x_to_hit)) >= im_regions.shape[1]:
         x_to_hit[np.argwhere(x_to_hit >= im_regions.shape[1])] = im_regions.shape[1]-1
     if np.abs(np.max(y_to_hit)) >= im_regions.shape[0]:
@@ -331,26 +336,25 @@ def crop(im):
     diff_width = im.shape[1] - 512
     start_width = (int)(diff_width/2)
     
-    # Beskaerer i bunden og lige meget i hver side til 496x512
+    # Crop only from the bottom and equally in sides to a size of 496x512
     crop_img = im[0:496,start_width:(start_width + 512)]
     
     return crop_img
     
 
 def load(img_dir):
-    #img_dir = r'C:\\Users\\danie\\Desktop\\ST8\\Projekt\\Data\\OCT2017\\SaveTest\\' 
     data_path = os.path.join(img_dir,'*g')
     files = glob.glob(data_path)
     data = []
     
     for f1 in files:
-        img = cv2.imread(f1,0) #0 så det er gray scale
+        img = cv2.imread(f1,0) #0 = gray scale
         data.append(img)
     return data, files
 
 def save(filepaths, data, sav_dir):
     #for f1 in range(len(filepaths)):
-    filepaths = filepaths.replace('NORMAL_val', sav_dir)
+    filepaths = filepaths.replace('NORMAL4', sav_dir)
     #if '-preprocessed' not in files[f1]:
     try:
         os.remove(filepaths.replace('.jpeg', '-preprocessed.jpeg'))
