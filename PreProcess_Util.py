@@ -30,7 +30,7 @@ def prep_im(im, thresh, col_to_remove):
     test_im2[:,im.shape[1]-col_to_remove+4:im.shape[1]] = 0
     for pred_region in ms.regionprops(ms.label(test_im2)):
         minr, minc, maxr, maxc = pred_region.bbox
-        if maxr >len(im)-1:# or minr == 0:
+        if maxr >len(im)-1 or minr == 0:
             # Coordinates for region
             Coord = pred_region.coords
             '''
@@ -354,7 +354,7 @@ def load(img_dir):
 
 def save(filepaths, data, sav_dir):
     #for f1 in range(len(filepaths)):
-    filepaths = filepaths.replace('NORMAL4', sav_dir)
+    filepaths = filepaths.replace('CNV', sav_dir, 1)    # 1 indicates only first occurence of the string
     #if '-preprocessed' not in files[f1]:
     try:
         os.remove(filepaths.replace('.jpeg', '-preprocessed.jpeg'))
