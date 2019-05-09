@@ -10,9 +10,9 @@ import os
 import PreProcess_Util as ppu
 
 img_dir = 'C:\\Users\\unnit\\OneDrive\\Desktop\\compare\\'
-all_dir = 'C:\\Users\\unnit\\OneDrive\\Desktop\\compare\\CNV_all'
-pp_dir = 'C:\\Users\\unnit\\OneDrive\\Desktop\\compare\\CNV_pp'
-destination_dir = 'C:\\Users\\unnit\\OneDrive\\Desktop\\compare\\CNV_destination'
+all_dir = 'C:\\Users\\unnit\\OneDrive\\Desktop\\compare\\CNV_all\\'
+pp_dir = 'C:\\Users\\unnit\\OneDrive\\Desktop\\compare\\CNV_pp\\'
+destination_dir = 'C:\\Users\\unnit\\OneDrive\\Desktop\\compare\\CNV_destination\\'
 
 
 # =============================================================================
@@ -35,7 +35,7 @@ for i in range(len(CNV_all)):
     for j in range(len(CNV_pp)):
         compare = CNV_pp[j].find(image)
         if compare == 0:
-            os.replace(all_dir+'\\'+image+'.jpeg',destination_dir+'\\'+image+'.jpeg')
+            os.replace(all_dir+image+'.jpeg',destination_dir+image+'.jpeg')
             CNV_destination.append(image)
             break
         else:
