@@ -12,6 +12,7 @@ And using implementation details from:
     https://github.com/eclique/RISE
     https://github.com/shivshankar20/eyediseases-AI-keras-imagenet-inception
 """
+import PreProcess_Util as ppu
 
 import os
 import numpy as np
@@ -41,14 +42,15 @@ from skimage.transform import resize
 classes = ['CNV', 'DME', 'DRUSEN', 'NORMAL']
 
 # Path to image(s)
-path = r'C:\Users\danie\Desktop\Misc\ST7\OCT---Transferlearning\DRUSEN-1047803-4-preprocessed.jpeg'
+path = r'C:\Users\Daniel Ramsing\Documents\GitHub\OCT---Transferlearning\images\CellData\OCT\All_til_Henrik\DME-1029576-2.jpeg'
 
 
 # load base model --> Inceptionv3
 base_model = InceptionV3(weights='imagenet', include_top=False)
 
 # Load our model (load_model is a keras function imported at top)
-our_model = load_model('./output/4conv_64_1_pool_09-0.94.hdf5')
+our_model = load_model('./output/Unpreproces_good_2_100_epochs.features.25-0.9466.hdf5')
+# Unpreprocessed: UnPreproces_2_100_epochs.features.71-0.944.hdf5
 
 # img target size
 img_target_size = (512,496)
@@ -74,7 +76,7 @@ def prep_img(path):
 # Predict, first basemodel then our model, used in explain function and to generate a normal prediction without heatmap
 def predict_img(img_as_array):
     x = base_model.predict(img_as_array)
-    pred =our_model.predict(x)
+    pred = our_model.predict(x)
     
     return pred
     
@@ -96,6 +98,7 @@ def generate_masks(N, s, p1):
         masks[i, :, :] = resize(grid[i], up_size, order=1, mode='reflect',
                                 anti_aliasing=False)[x:x + img_target_size[0], y:y + img_target_size[1]]
     masks = masks.reshape(-1, *img_target_size, 1)
+    masks = masks.astype('float32')
     return masks
     
 
@@ -129,28 +132,35 @@ def explain(x, masks):
 
 
 # Keras backend --> do not train, only predict
+
 K.set_learning_phase(0)
 
+img_dir = r'C:\Users\danie\Desktop\ST8\Projekt\Data\OCT2017\train\SaveTest'
+#C:\Users\Daniel Ramsing\Documents\GitHub\OCT---Transferlearning\images\CellData\OCT\Preprocessed\Test_prepro
+data, files = ppu.load(img_dir)
 
-img, x = prep_img(path)
+
+Pred_prob = []
+img = []
+x = []
+pred_by_name = []
+Sal_maps = []
+for f1 in tqdm(range(len(data))):
+    temp, temp2 = prep_img(files[f1])
+    img.append(temp)
+    x.append(temp2)
+
+for f1 in tqdm(range(len(data))):
+    Pred_prob.append(predict_img(x[f1]))
+
+Pred_prob_cat = np.concatenate(Pred_prob, axis = 0)
+class_idx = np.argmax(Pred_prob_cat, axis = 1)
+for f1 in range(len(data)):
+    pred_by_name.append(classes[class_idx[f1]])
 
 masks = generate_masks(N, s, p1)
 
-sal_map = explain(x, masks)
+for f1 in tqdm(range(len(data)), desc = 'Explaining images...'):
+    sal_map = explain(x[f1], masks)
+    Sal_maps.append(sal_map)
 
-Pred_prob = predict_img(x)
-Pred_prob = Pred_prob.reshape(len(classes))
-class_idx = np.argmax(Pred_prob)
-
-
-print('Image prediction was:')
-print(classes[class_idx] + '\n')
-print('with probability:')
-print(Pred_prob[class_idx])
-
-
-plt.figure
-plt.axis('off')
-plt.imshow(img)
-plt.imshow(sal_map[class_idx], cmap = 'jet', alpha = 0.5)
-plt.show()
